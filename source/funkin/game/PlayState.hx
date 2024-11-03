@@ -450,6 +450,10 @@ class PlayState extends MusicBeatState
 	 */
 	public var comboGroup:RotatingSpriteGroup;
 	/**
+	 * Class responsible for managing judgements.
+	**/
+	public var judgeManager:JudgementManager = new JudgementManager();
+	/**
 	 * Minimum Combo Count to display the combo digits.
 	**/
 	public var minDigitDisplay: Int = 5;
@@ -1611,7 +1615,7 @@ class PlayState extends MusicBeatState
 		 * CALCULATES RATING
 		 */
 		var noteDiff = Math.abs(Conductor.songPosition - note.strumTime);
-		var daJudge:Judgement = JudgementManager.judge(noteDiff);
+		var daJudge:Judgement = judgeManager.judge(noteDiff);
 		// old judgement system
 		/*
 		var score:Int = 300;
