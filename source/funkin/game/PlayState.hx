@@ -11,6 +11,8 @@ import flixel.graphics.FlxGraphic;
 import funkin.backend.chart.Chart;
 import funkin.backend.chart.ChartData;
 import funkin.game.SplashHandler;
+import funkin.game.play.Judgement;
+import funkin.game.play.JudgementManager;
 import funkin.backend.scripting.DummyScript;
 import funkin.menus.StoryMenuState.WeekData;
 import funkin.backend.FunkinText;
@@ -455,6 +457,10 @@ class PlayState extends MusicBeatState
 	 * Group containing all of the combo sprites.
 	 */
 	public var comboGroup:RotatingSpriteGroup;
+	/**
+	 * Minimum Combo Count to display the combo digits.
+	**/
+	public var minDigitDisplay: Int = 5;
 	/**
 	 * Array containing all of the note types names.
 	 */
@@ -1620,10 +1626,12 @@ class PlayState extends MusicBeatState
 		 * CALCULATES RATING
 		 */
 		var noteDiff = Math.abs(Conductor.songPosition - note.strumTime);
-		var daRating:String = "sick";
+		var daJudge:Judgement = JudgementManager.judge(noteDiff);
+		// old judgement system
+		/*
 		var score:Int = 300;
 		var accuracy:Float = 1;
-
+		var daRating:String = "sick";
 		if (noteDiff > hitWindow * 0.9)
 		{
 			daRating = 'shit';
@@ -1642,12 +1650,13 @@ class PlayState extends MusicBeatState
 			score = 200;
 			accuracy = 0.75;
 		}
+		*/
 
 		var event:NoteHitEvent;
 		if (strumLine != null && !strumLine.cpu)
-			event = scripts.event("onPlayerHit", EventManager.get(NoteHitEvent).recycle(false, !note.isSustainNote, !note.isSustainNote, note, strumLine.characters, true, note.noteType, note.animSuffix.getDefault(note.strumID < strumLine.members.length ? strumLine.members[note.strumID].animSuffix : strumLine.animSuffix), "game/score/", "", note.strumID, score, note.isSustainNote ? null : accuracy, 0.023, daRating, Options.splashesEnabled && !note.isSustainNote && daRating == "sick"));
+			event = scripts.event("onPlayerHit", EventManager.get(NoteHitEvent).recycle(false, !note.isSustainNote, !note.isSustainNote, note, strumLine.characters, true, note.noteType, note.animSuffix.getDefault(note.strumID < strumLine.members.length ? strumLine.members[note.strumID].animSuffix : strumLine.animSuffix), "game/score/", "", note.strumID, daJudge.score, note.isSustainNote ? null : daJudge.accuracy, 0.023, daJudge.image, Options.splashesEnabled && !note.isSustainNote && daJudge.noteSplash));
 		else
-			event = scripts.event("onDadHit", EventManager.get(NoteHitEvent).recycle(false, false, false, note, strumLine.characters, false, note.noteType, note.animSuffix.getDefault(note.strumID < strumLine.members.length ? strumLine.members[note.strumID].animSuffix : strumLine.animSuffix), "game/score/", "", note.strumID, 0, null, 0, daRating, false));
+			event = scripts.event("onDadHit", EventManager.get(NoteHitEvent).recycle(false, false, false, note, strumLine.characters, false, note.noteType, note.animSuffix.getDefault(note.strumID < strumLine.members.length ? strumLine.members[note.strumID].animSuffix : strumLine.animSuffix), "game/score/", "", note.strumID, 0, null, 0, daJudge.image, false));
 		strumLine.onHit.dispatch(event);
 		scripts.event("onNoteHit", event);
 
@@ -1663,8 +1672,8 @@ class PlayState extends MusicBeatState
 
 				if (event.showRating || (event.showRating == null && event.player))
 				{
-					displayCombo(event);
 					displayRating(event.rating, event);
+					displayCombo(event);
 					ratingNum += 1;
 				}
 			}
@@ -1727,29 +1736,8 @@ class PlayState extends MusicBeatState
 
 		var separatedScore:String = Std.string(combo).addZeros(3);
 
-		if (combo == 0 || combo >= 10) {
-			if (combo >= 10) {
-				var comboSpr:FlxSprite = comboGroup.recycleLoop(FlxSprite).loadAnimatedGraphic(Paths.image('${pre}combo${suf}'));
-				comboSpr.resetSprite(comboGroup.x, comboGroup.y);
-				comboSpr.acceleration.y = 600;
-				comboSpr.velocity.y -= 150;
-				comboSpr.velocity.x += FlxG.random.int(1, 10);
-
-				if (evt != null) {
-					comboSpr.scale.set(evt.ratingScale, evt.ratingScale);
-					comboSpr.antialiasing = evt.ratingAntialiasing;
-				}
-				comboSpr.updateHitbox();
-
-				FlxTween.tween(comboSpr, {alpha: 0}, 0.2, {
-					onComplete: function(tween:FlxTween)
-					{
-						comboSpr.kill();
-					},
-					startDelay: Conductor.crochet * 0.001
-				});
-			}
-
+		if (combo == 0 || combo >= minDigitDisplay) {
+			// displayComboSprite(evt);
 			for (i in 0...separatedScore.length)
 			{
 				var numScore:FlxSprite = comboGroup.recycleLoop(FlxSprite).loadAnimatedGraphic(Paths.image('${pre}num${separatedScore.charAt(i)}${suf}'));
@@ -1772,6 +1760,33 @@ class PlayState extends MusicBeatState
 					startDelay: Conductor.crochet * 0.002
 				});
 			}
+		}
+	}
+
+	private function displayComboSprite(evt: NoteHitEvent = null):Void {
+		var pre:String = evt != null ? evt.ratingPrefix : "";
+		var suf:String = evt != null ? evt.ratingSuffix : "";
+
+		if (combo >= minDigitDisplay) {
+			var comboSpr:FlxSprite = comboGroup.recycleLoop(FlxSprite).loadAnimatedGraphic(Paths.image('${pre}combo${suf}'));
+			comboSpr.resetSprite(comboGroup.x, comboGroup.y);
+			comboSpr.acceleration.y = 600;
+			comboSpr.velocity.y -= 150;
+			comboSpr.velocity.x += FlxG.random.int(1, 10);
+
+			if (evt != null) {
+				comboSpr.scale.set(evt.ratingScale, evt.ratingScale);
+				comboSpr.antialiasing = evt.ratingAntialiasing;
+			}
+			comboSpr.updateHitbox();
+
+			FlxTween.tween(comboSpr, {alpha: 0}, 0.2, {
+				onComplete: function(tween:FlxTween)
+				{
+					comboSpr.kill();
+				},
+				startDelay: Conductor.crochet * 0.001
+			});
 		}
 	}
 

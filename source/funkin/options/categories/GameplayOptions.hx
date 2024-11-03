@@ -18,6 +18,13 @@ class GameplayOptions extends OptionsScreen {
 			"Ghost Tapping",
 			"If unchecked, trying to hit any strum that have no note that can be hit will cause a miss.",
 			"ghostTapping"));
+		#if USE_EPICS
+		add(new Checkbox(
+			"Use Epic Judgement",
+			"If checked, enables a new 5th judgement used as a higher ranking than \"Sick!\" - affects scoring and accuracy.",
+			"useEpics"
+		));
+		#end
 		add(offsetSetting = new NumOption(
 			"Song Offset",
 			"Changes the offset that songs should start with.",
