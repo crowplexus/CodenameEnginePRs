@@ -1713,6 +1713,8 @@ class PlayState extends MusicBeatState
 		var rating:FlxSprite = comboGroup.recycleLoop(FlxSprite);
 		rating.resetSprite(comboGroup.x + -40, comboGroup.y + -60);
 		rating.loadAnimatedGraphic(Paths.image('${pre}${myRating}${suf}'));
+		if (Options.hudJudgements)
+			rating.cameras = [camHUD];
 		rating.acceleration.y = 550;
 		rating.velocity.y -= FlxG.random.int(140, 175);
 		rating.velocity.x -= FlxG.random.int(0, 10);
@@ -1747,6 +1749,8 @@ class PlayState extends MusicBeatState
 					numScore.scale.set(evt.numScale, evt.numScale);
 				}
 				numScore.updateHitbox();
+				if (Options.hudJudgements)
+					numScore.cameras = [camHUD];
 
 				numScore.acceleration.y = FlxG.random.int(200, 300);
 				numScore.velocity.y -= FlxG.random.int(140, 160);
@@ -1773,6 +1777,8 @@ class PlayState extends MusicBeatState
 			comboSpr.acceleration.y = 600;
 			comboSpr.velocity.y -= 150;
 			comboSpr.velocity.x += FlxG.random.int(1, 10);
+			if (Options.hudJudgements) // i tried setting comboGroup camera but it didn't work lol
+				comboSpr.cameras = [camHUD];
 
 			if (evt != null) {
 				comboSpr.scale.set(evt.ratingScale, evt.ratingScale);

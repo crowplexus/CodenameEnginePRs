@@ -38,6 +38,7 @@ class Options
 	#if USE_EPICS
 	public static var useEpics: Bool = true;
 	#end
+	public static var hudJudgements: Bool = false;
 
 	public static var lastLoadedMod:String = null;
 

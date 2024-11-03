@@ -20,6 +20,11 @@ class AppearanceOptions extends OptionsScreen {
 			"If unchecked, the game will use the orginal red/green health bar from the week 6 fnf game.",
 			"colorHealthBar"));
 		add(new Checkbox(
+			"HUD Judgements",
+			"If checked, displays the judgements and combo on the HUD, rather than the world.",
+			"hudJudgements"
+		));
+		add(new Checkbox(
 			"Pixel Perfect Effect",
 			"If checked, Week 6 will have a pixel perfect effect to it enabled, aligning every pixel on the screen.",
 			"week6PixelPerfect"));
