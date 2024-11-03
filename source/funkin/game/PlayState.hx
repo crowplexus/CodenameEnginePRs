@@ -425,7 +425,7 @@ class PlayState extends MusicBeatState
 	/**
 	 * Array of sprites for the intro.
 	 */
-	public var introSprites:Array<String> = [null, 'game/ready', "game/set", "game/go"];
+	public var introSprites:Array<String> = ["game/prepare", 'game/ready', "game/set", "game/go"];
 	/**
 	 * Array of sounds for the intro.
 	 */
