@@ -330,14 +330,6 @@ class PlayState extends MusicBeatState
 	 * FunkinText that shows your score.
 	 */
 	public var scoreTxt:FunkinText;
-	/**
-	 * FunkinText that shows your amount of misses.
-	 */
-	public var missesTxt:FunkinText;
-	/**
-	 * FunkinText that shows your accuracy.
-	 */
-	public var accuracyTxt:FunkinText;
 
 	/**
 	 * Score for the current week.
@@ -746,21 +738,15 @@ class PlayState extends MusicBeatState
 			add(icon);
 		}
 
-		scoreTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, Std.int(healthBarBG.width - 100), "Score:0", 16);
-		missesTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, Std.int(healthBarBG.width - 100), "Misses:0", 16);
-		accuracyTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, Std.int(healthBarBG.width - 100), "Accuracy:-% (N/A)", 16);
-		accuracyTxt.addFormat(accFormat, 0, 1);
-
-		for(text in [scoreTxt, missesTxt, accuracyTxt]) {
-			text.scrollFactor.set();
-			add(text);
-		}
-		scoreTxt.alignment = RIGHT;
-		missesTxt.alignment = CENTER;
-		accuracyTxt.alignment = LEFT;
+		scoreTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, Std.int(healthBarBG.width + 10), "Misses: 0 / Accuracy: ?.??% [N/A] \\ Score: 0", 18);
+		scoreTxt.addFormat(accFormat, 0, 1);
+		scoreTxt.alignment = CENTER;
+		scoreTxt.scrollFactor.set();
+		scoreTxt.screenCenter(X);
+		add(scoreTxt);
 		updateRatingStuff();
 
-		for(e in [healthBar, healthBarBG, iconP1, iconP2, scoreTxt, missesTxt, accuracyTxt])
+		for(e in [healthBar, healthBarBG, iconP1, iconP2, scoreTxt])
 			e.cameras = [camHUD];
 		#end
 
@@ -1215,19 +1201,18 @@ class PlayState extends MusicBeatState
 	}
 
 	function updateRatingStuff() {
-		scoreTxt.text = 'Score:$songScore';
-		missesTxt.text = '${comboBreaks ? "Combo Breaks" : "Misses"}:$misses';
-
 		if (curRating == null)
-			curRating = new ComboRating(0, "[N/A]", 0xFF888888);
-
+			curRating = new ComboRating(0, "N/A", 0xFF888888);
+		var scoreStr: String = flixel.util.FlxStringUtil.formatMoney(songScore);
+		var accuracyStr: String = '${accuracy < 0 ? "?.??%" : '${CoolUtil.quantize(accuracy * 100, 100)}%'} [${curRating.rating}]';
+		var scoreDisplay: String = '${comboBreaks ? "Combo Breaks" : "Misses"}: $misses / Accuracy: $accuracyStr \\ Score: $scoreStr';
 		@:privateAccess {
 			accFormat.format.color = curRating.color;
-			accuracyTxt.text = 'Accuracy:${accuracy < 0 ? "-%" : '${CoolUtil.quantize(accuracy * 100, 100)}%'} - ${curRating.rating}';
-
-			accuracyTxt._formatRanges[0].range.start = accuracyTxt.text.length - curRating.rating.length;
-			accuracyTxt._formatRanges[0].range.end = accuracyTxt.text.length;
+			scoreTxt._formatRanges[0].range.end = scoreDisplay.lastIndexOf("]") + 1;
+			scoreTxt._formatRanges[0].range.start = scoreDisplay.indexOf("[");
 		}
+		scoreTxt.text = scoreDisplay;
+		scoreTxt.screenCenter(X);
 	}
 
 	@:dox(hide)
