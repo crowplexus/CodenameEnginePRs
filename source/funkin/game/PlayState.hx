@@ -742,7 +742,7 @@ class PlayState extends MusicBeatState
 			add(icon);
 		}
 
-		scoreTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, Std.int(healthBarBG.width + 10), "Misses: 0 / Accuracy: ?.??% [N/A] \\ Score: 0", 18);
+		scoreTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, 0, "Misses: 0 / Accuracy: ?.??% [N/A] \\ Score: 0", 18);
 		scoreTxt.addFormat(accFormat, 0, 1);
 		scoreTxt.alignment = CENTER;
 		scoreTxt.scrollFactor.set();
