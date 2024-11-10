@@ -35,6 +35,10 @@ class Options
 	public static var songOffset:Float = 0;
 	public static var framerate:Int = 120;
 	public static var gpuOnlyBitmaps:Bool = #if (mac || web) false #else true #end; // causes issues on mac and web
+	#if USE_EPICS
+	public static var useEpics: Bool = true;
+	#end
+	public static var hudJudgements: Bool = false;
 
 	public static var lastLoadedMod:String = null;
 

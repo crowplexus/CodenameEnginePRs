@@ -11,6 +11,8 @@ import flixel.graphics.FlxGraphic;
 import funkin.backend.chart.Chart;
 import funkin.backend.chart.ChartData;
 import funkin.game.SplashHandler;
+import funkin.game.play.Judgement;
+import funkin.game.play.JudgementManager;
 import funkin.backend.scripting.DummyScript;
 import funkin.menus.StoryMenuState.WeekData;
 import funkin.backend.FunkinText;
@@ -328,14 +330,6 @@ class PlayState extends MusicBeatState
 	 * FunkinText that shows your score.
 	 */
 	public var scoreTxt:FunkinText;
-	/**
-	 * FunkinText that shows your amount of misses.
-	 */
-	public var missesTxt:FunkinText;
-	/**
-	 * FunkinText that shows your accuracy.
-	 */
-	public var accuracyTxt:FunkinText;
 
 	/**
 	 * Score for the current week.
@@ -423,7 +417,7 @@ class PlayState extends MusicBeatState
 	/**
 	 * Array of sprites for the intro.
 	 */
-	public var introSprites:Array<String> = [null, 'game/ready', "game/set", "game/go"];
+	public var introSprites:Array<String> = ["game/prepare", 'game/ready', "game/set", "game/go"];
 	/**
 	 * Array of sounds for the intro.
 	 */
@@ -455,6 +449,19 @@ class PlayState extends MusicBeatState
 	 * Group containing all of the combo sprites.
 	 */
 	public var comboGroup:RotatingSpriteGroup;
+	/**
+	 * Class responsible for managing judgements.
+	 */
+	public var judgeManager:JudgementManager = new JudgementManager();
+	/**
+	 * Minimum Combo Count to display the combo digits.
+	 */
+	public var minDigitDisplay: Int = 5;
+	/**
+	 * If the image with "COMBO" written on it should be displayed (like old Week 7 patches)
+	 * PS: this shit's useless keep it off if you don't wanna clutter the UI
+	 */
+	public var comboSpriteOnPopups: Bool = false;
 	/**
 	 * Array containing all of the note types names.
 	 */
@@ -740,21 +747,15 @@ class PlayState extends MusicBeatState
 			add(icon);
 		}
 
-		scoreTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, Std.int(healthBarBG.width - 100), "Score:0", 16);
-		missesTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, Std.int(healthBarBG.width - 100), "Misses:0", 16);
-		accuracyTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, Std.int(healthBarBG.width - 100), "Accuracy:-% (N/A)", 16);
-		accuracyTxt.addFormat(accFormat, 0, 1);
-
-		for(text in [scoreTxt, missesTxt, accuracyTxt]) {
-			text.scrollFactor.set();
-			add(text);
-		}
-		scoreTxt.alignment = RIGHT;
-		missesTxt.alignment = CENTER;
-		accuracyTxt.alignment = LEFT;
+		scoreTxt = new FunkinText(healthBarBG.x + 50, healthBarBG.y + 30, 0, "Misses: 0 / Accuracy: ?.??% [N/A] \\ Score: 0", 18);
+		scoreTxt.addFormat(accFormat, 0, 1);
+		scoreTxt.alignment = CENTER;
+		scoreTxt.scrollFactor.set();
+		scoreTxt.screenCenter(X);
+		add(scoreTxt);
 		updateRatingStuff();
 
-		for(e in [healthBar, healthBarBG, iconP1, iconP2, scoreTxt, missesTxt, accuracyTxt])
+		for(e in [healthBar, healthBarBG, iconP1, iconP2, scoreTxt])
 			e.cameras = [camHUD];
 		#end
 
@@ -1209,19 +1210,18 @@ class PlayState extends MusicBeatState
 	}
 
 	function updateRatingStuff() {
-		scoreTxt.text = 'Score:$songScore';
-		missesTxt.text = '${comboBreaks ? "Combo Breaks" : "Misses"}:$misses';
-
 		if (curRating == null)
-			curRating = new ComboRating(0, "[N/A]", 0xFF888888);
-
+			curRating = new ComboRating(0, "N/A", 0xFF888888);
+		var scoreStr: String = flixel.util.FlxStringUtil.formatMoney(songScore);
+		var accuracyStr: String = '${accuracy < 0 ? "?.??%" : '${CoolUtil.quantize(accuracy * 100, 100)}%'} [${curRating.rating}]';
+		var scoreDisplay: String = '${comboBreaks ? "Combo Breaks" : "Misses"}: $misses / Accuracy: $accuracyStr \\ Score: $scoreStr';
 		@:privateAccess {
 			accFormat.format.color = curRating.color;
-			accuracyTxt.text = 'Accuracy:${accuracy < 0 ? "-%" : '${CoolUtil.quantize(accuracy * 100, 100)}%'} - ${curRating.rating}';
-
-			accuracyTxt._formatRanges[0].range.start = accuracyTxt.text.length - curRating.rating.length;
-			accuracyTxt._formatRanges[0].range.end = accuracyTxt.text.length;
+			scoreTxt._formatRanges[0].range.end = scoreDisplay.lastIndexOf("]") + 1;
+			scoreTxt._formatRanges[0].range.start = scoreDisplay.indexOf("[");
 		}
+		scoreTxt.text = scoreDisplay;
+		scoreTxt.screenCenter(X);
 	}
 
 	@:dox(hide)
@@ -1620,10 +1620,12 @@ class PlayState extends MusicBeatState
 		 * CALCULATES RATING
 		 */
 		var noteDiff = Math.abs(Conductor.songPosition - note.strumTime);
-		var daRating:String = "sick";
+		var daJudge:Judgement = judgeManager.judge(noteDiff);
+		// old judgement system
+		/*
 		var score:Int = 300;
 		var accuracy:Float = 1;
-
+		var daRating:String = "sick";
 		if (noteDiff > hitWindow * 0.9)
 		{
 			daRating = 'shit';
@@ -1642,12 +1644,13 @@ class PlayState extends MusicBeatState
 			score = 200;
 			accuracy = 0.75;
 		}
+		*/
 
 		var event:NoteHitEvent;
 		if (strumLine != null && !strumLine.cpu)
-			event = EventManager.get(NoteHitEvent).recycle(false, !note.isSustainNote, !note.isSustainNote, note, strumLine.characters, true, note.noteType, note.animSuffix.getDefault(note.strumID < strumLine.members.length ? strumLine.members[note.strumID].animSuffix : strumLine.animSuffix), "game/score/", "", note.strumID, score, note.isSustainNote ? null : accuracy, 0.023, daRating, Options.splashesEnabled && !note.isSustainNote && daRating == "sick");
+			event = EventManager.get(NoteHitEvent).recycle(false, !note.isSustainNote, !note.isSustainNote, note, strumLine.characters, true, note.noteType, note.animSuffix.getDefault(note.strumID < strumLine.members.length ? strumLine.members[note.strumID].animSuffix : strumLine.animSuffix), "game/score/", "", note.strumID, score, note.isSustainNote ? null : accuracy, 0.023, daJudge.image, Options.splashesEnabled && !note.isSustainNote && daJudge.noteSplash);
 		else
-			event = EventManager.get(NoteHitEvent).recycle(false, false, false, note, strumLine.characters, false, note.noteType, note.animSuffix.getDefault(note.strumID < strumLine.members.length ? strumLine.members[note.strumID].animSuffix : strumLine.animSuffix), "game/score/", "", note.strumID, 0, null, 0, daRating, false);
+			event = EventManager.get(NoteHitEvent).recycle(false, false, false, note, strumLine.characters, false, note.noteType, note.animSuffix.getDefault(note.strumID < strumLine.members.length ? strumLine.members[note.strumID].animSuffix : strumLine.animSuffix), "game/score/", "", note.strumID, 0, null, 0, daJudge.image, false);
 		event.deleteNote = !note.isSustainNote; // work around, to allow sustain notes to be deleted
 		event = scripts.event(strumLine != null && !strumLine.cpu ? "onPlayerHit" : "onDadHit", event);
 		strumLine.onHit.dispatch(event);
@@ -1706,6 +1709,8 @@ class PlayState extends MusicBeatState
 		var rating:FlxSprite = comboGroup.recycleLoop(FlxSprite);
 		rating.resetSprite(comboGroup.x + -40, comboGroup.y + -60);
 		rating.loadAnimatedGraphic(Paths.image('${pre}${myRating}${suf}'));
+		if (Options.hudJudgements)
+			rating.cameras = [camHUD];
 		rating.acceleration.y = 550;
 		rating.velocity.y -= FlxG.random.int(140, 175);
 		rating.velocity.x -= FlxG.random.int(0, 10);
@@ -1729,29 +1734,9 @@ class PlayState extends MusicBeatState
 
 		var separatedScore:String = Std.string(combo).addZeros(3);
 
-		if (combo == 0 || combo >= 10) {
-			if (combo >= 10) {
-				var comboSpr:FlxSprite = comboGroup.recycleLoop(FlxSprite).loadAnimatedGraphic(Paths.image('${pre}combo${suf}'));
-				comboSpr.resetSprite(comboGroup.x, comboGroup.y);
-				comboSpr.acceleration.y = 600;
-				comboSpr.velocity.y -= 150;
-				comboSpr.velocity.x += FlxG.random.int(1, 10);
-
-				if (evt != null) {
-					comboSpr.scale.set(evt.ratingScale, evt.ratingScale);
-					comboSpr.antialiasing = evt.ratingAntialiasing;
-				}
-				comboSpr.updateHitbox();
-
-				FlxTween.tween(comboSpr, {alpha: 0}, 0.2, {
-					onComplete: function(tween:FlxTween)
-					{
-						comboSpr.kill();
-					},
-					startDelay: Conductor.crochet * 0.001
-				});
-			}
-
+		if (combo == 0 || combo >= minDigitDisplay) {
+			if (comboSpriteOnPopups)
+				displayComboSprite(evt);
 			for (i in 0...separatedScore.length)
 			{
 				var numScore:FlxSprite = comboGroup.recycleLoop(FlxSprite).loadAnimatedGraphic(Paths.image('${pre}num${separatedScore.charAt(i)}${suf}'));
@@ -1761,6 +1746,8 @@ class PlayState extends MusicBeatState
 					numScore.scale.set(evt.numScale, evt.numScale);
 				}
 				numScore.updateHitbox();
+				if (Options.hudJudgements)
+					numScore.cameras = [camHUD];
 
 				numScore.acceleration.y = FlxG.random.int(200, 300);
 				numScore.velocity.y -= FlxG.random.int(140, 160);
@@ -1774,6 +1761,35 @@ class PlayState extends MusicBeatState
 					startDelay: Conductor.crochet * 0.002
 				});
 			}
+		}
+	}
+
+	private function displayComboSprite(evt: NoteHitEvent = null):Void {
+		var pre:String = evt != null ? evt.ratingPrefix : "";
+		var suf:String = evt != null ? evt.ratingSuffix : "";
+
+		if (combo >= minDigitDisplay) {
+			var comboSpr:FlxSprite = comboGroup.recycleLoop(FlxSprite).loadAnimatedGraphic(Paths.image('${pre}combo${suf}'));
+			comboSpr.resetSprite(comboGroup.x, comboGroup.y);
+			comboSpr.acceleration.y = 600;
+			comboSpr.velocity.y -= 150;
+			comboSpr.velocity.x += FlxG.random.int(1, 10);
+			if (Options.hudJudgements) // i tried setting comboGroup camera but it didn't work lol
+				comboSpr.cameras = [camHUD];
+
+			if (evt != null) {
+				comboSpr.scale.set(evt.ratingScale, evt.ratingScale);
+				comboSpr.antialiasing = evt.ratingAntialiasing;
+			}
+			comboSpr.updateHitbox();
+
+			FlxTween.tween(comboSpr, {alpha: 0}, 0.2, {
+				onComplete: function(tween:FlxTween)
+				{
+					comboSpr.kill();
+				},
+				startDelay: Conductor.crochet * 0.001
+			});
 		}
 	}
 

@@ -69,8 +69,6 @@
 
 	<!-- ______________________________ Haxedefines _____________________________ -->
 
-	<haxeflag name="--macro" value="funkin.backend.system.macros.NewHaxeWarning.warn()" />
-
 	<haxedef name="FLX_NO_FOCUS_LOST_SCREEN" />
 
 	<!--Disable the Flixel core debugger. Automatically gets set whenever you compile in release mode!-->
@@ -102,6 +100,12 @@
 	<!-- Comment this out to disable Discord RPC !-->
 	<section if="cpp">
 		<define name="DISCORD_RPC" if="desktop"/>
+	</section>
+
+	<!-- Enables a 5th judgement which is not originally on FNF. -->
+	<define name="USE_EPICS" />
+	<section if="USE_EPICS">
+		<assets path='customContent' rename='assets' embed='false'/>
 	</section>
 
 	<!-- Comment this out to disable GitHub API integration !-->
